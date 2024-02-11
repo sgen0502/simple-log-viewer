@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tail-like Viewer</title>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+</head>
+<body>
+<button id="refresh">Refresh</button>
+<pre id="log"></pre>
+<script>
+    const logElement = document.getElementById('log');
+    const ws = new WebSocket('ws://' + window.location.host);
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if(data.type === 'init'){
+            logElement.textContent = logElement.textContent + '\n' + data.data;
+        }
+        else{
+            logElement.textContent = data.data  + logElement.textContent;
+        }
+    };
+
+    document.getElementById("refresh").onclick = function() {
+        ws.send("Fetch");
+    };
+</script>
+</body>
+</html>

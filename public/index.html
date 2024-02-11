@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <title>Simpler Log Viewer</title>
+    <link rel='stylesheet' href='style.css'>
+</head>
+<body>
+<div class='log-container'>
+    <div class='sidebar'>
+        <div class='logo'>Simple Log Viewer</div>
+        <div id='file-menu' class='menu'></div>
+    </div>
+    <div class='log-viewer'>
+        <div class='log-header'>
+            <header>
+                <nav>
+                    <div class='nav-items'>
+                        <input id='watch' type='checkBox'>Watch File Update</input>
+                        <input id='wrap' type='checkBox'>Wrap Words</input>
+                        <button id='refresh'>Refresh</button>
+                    </div>
+                </nav>
+            </header>
+        </div>
+        <div class='log-entry'>
+            <pre id='log' class='log-content'></pre>
+        </div>
+        <!-- Add more log entries here -->
+    </div>
+</div>
+<script>
+    const ids = {
+        logBody: 'log',
+        watchCheck: 'watch',
+        wrapCheck: 'wrap',
+        refreshBtn: 'refresh'
+    };
+
+    const commandTypes = {
+        fileChange: 'file_change',
+        watch: 'watch',
+    }
+
+    const ws = new WebSocket('ws://' + window.location.host);
+
+    function menu_onClick(e){
+        const menuElements = document.querySelectorAll('#file-menu > a');
+        menuElements.forEach(e => e.classList.remove('active'))
+        e.target.classList.add('active');
+
+        const logElement = document.getElementById(ids.logBody);
+        logElement.textContent = '';
+
+        const request = {
+            type: commandTypes.fileChange,
+            data: {
+                file: e.target.getAttribute('dir') + e.target.textContent,
+                watch: document.getElementById('watch').checked
+            }
+        }
+        ws.send(JSON.stringify(request))
+    }
+
+    function watchFileOnChange(e){
+        const request = {
+            type: commandTypes.watch,
+            data: {
+                watch: e.target.checked
+            }
+        }
+
+        ws.send(JSON.stringify(request))
+    }
+
+    ws.onmessage = function(event) {
+        const response = JSON.parse(event.data);
+        if(response.type === 'init'){
+            const logElement = document.getElementById(ids.logBody);
+            logElement.textContent = logElement.textContent + '\n' + response.data;
+        }
+        else if(response.type === 'files'){
+            const logElement = document.getElementById('file-menu');
+            response.data.forEach(dirAndFiles => {
+                const dirMenu = document.createElement('div');
+                dirMenu.textContent = dirAndFiles.dir.toString();
+                logElement.append(dirMenu);
+
+                dirAndFiles.files.forEach(file => {
+                    const newA = document.createElement('a');
+                    newA.textContent = file.toString();
+                    newA.setAttribute('dir', dirAndFiles.dir.toString());
+                    newA.onclick = menu_onClick;
+                    logElement.append(newA);
+                })
+            })
+        }
+        else{
+            const logElement = document.getElementById(ids.logBody);
+            logElement.textContent = response.data  + logElement.textContent;
+        }
+    };
+
+    // Event Registering
+    document.getElementById(ids.refreshBtn).onclick = function() {
+        ws.send(JSON.stringify({type: 'fetch'}));
+    };
+
+    document.getElementById(ids.watchCheck).onclick = watchFileOnChange
+
+    document.getElementById(ids.wrapCheck).onclick = function(e) {
+        if(e.target.checked)
+            document.getElementById(ids.logBody).classList.add('pre-wrap')
+        else
+            document.getElementById(ids.logBody).classList.remove('pre-wrap')
+    };
+</script>
+</body>
+</html>

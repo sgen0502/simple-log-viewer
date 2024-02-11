@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tail-like Viewer</title>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+    <link rel="stylesheet" href="style3.css">
+</head>
+<body>
+<button id="refresh">Refresh</button>
+<header>
+    <nav>
+        <div class="logo">Logger</div>
+        <div class="nav-items">
+            <input type="search" placeholder="Search logs...">
+            <button>Refresh</button>
+        </div>
+    </nav>
+</header>
+<main>
+    <ul class="log-list">
+        <!-- Example Log Entry -->
+        <li class="log-entry info">
+            <span class="timestamp">2023-01-01 12:00:00</span>
+            <span class="message">This is an info log message.</span>
+        </li>
+        <!-- Repeat for each log entry -->
+    </ul>
+    <pre id="log"></pre>
+</main>
+<script>
+    const logElement = document.getElementById('log');
+    const ws = new WebSocket('ws://' + window.location.host);
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if(data.type === 'init'){
+            logElement.textContent = logElement.textContent + '\n' + data.data;
+        }
+        else{
+            logElement.textContent = data.data  + logElement.textContent;
+        }
+    };
+
+    document.getElementById("refresh").onclick = function() {
+        ws.send("Fetch");
+    };
+</script>
+</body>
+</html>
