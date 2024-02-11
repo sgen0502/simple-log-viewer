@@ -10,6 +10,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 gracefulFs.gracefulify(fs);
 
+app.use(express.json());
 app.use(express.static('public'));
 
 const directoryPath = process.env.TARGET_PATH;
@@ -188,6 +189,15 @@ wss.on('connection', ws => {
             watcher.close();
         }
     });
+});
+
+app.post('/download', function(req, res){
+    if(!!req.body.file){
+        const file = req.body.file;
+        res.download(file); // Set disposition and send it.
+    }
+
+    console.log("No File Given!")
 });
 
 server.listen(12345, () => console.log('Server started on http://localhost:12345'));

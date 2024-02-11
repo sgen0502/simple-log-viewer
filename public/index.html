@@ -16,9 +16,16 @@
             <header>
                 <nav>
                     <div class='nav-items'>
-                        <input id='watch' type='checkBox'>Watch File Update</input>
-                        <input id='wrap' type='checkBox'>Wrap Words</input>
-                        <button id='refresh'>Refresh</button>
+                        <div>
+                            <input id='watch' type='checkBox'/>
+                            <label for="watch">Watch Updates</label>
+                            <input id='wrap' type='checkBox'/>
+                            <label for="wrap">Wrap Words</label>
+                            <button id='refresh'>Refresh</button>
+                        </div>
+                        <div>
+                            <button id='download'>Download</button>
+                        </div>
                     </div>
                 </nav>
             </header>
@@ -36,7 +43,8 @@
         logBody: 'log-list',
         watchCheck: 'watch',
         wrapCheck: 'wrap',
-        refreshBtn: 'refresh'
+        refreshBtn: 'refresh',
+        downloadBtn: 'download'
     };
 
     const attribute = {
@@ -55,6 +63,8 @@
     }
 
     const ws = new WebSocket('ws://' + window.location.host);
+    let currentFilePath;
+    let currentFileName;
 
     function menu_onClick(e){
         const menuElements = document.querySelectorAll('#file-menu > a');
@@ -64,10 +74,12 @@
         const logElement = document.getElementById(ids.logBody);
         logElement.innerHTML = "";
 
+        currentFileName = e.target.textContent;
+        currentFilePath = e.target.getAttribute(attribute.dirName) + e.target.textContent
         const request = {
             type: commandTypes.fileChange,
             data: {
-                file: e.target.getAttribute(attribute.dirName) + e.target.textContent,
+                file: currentFilePath,
                 watch: document.getElementById('watch').checked
             }
         }
@@ -137,6 +149,39 @@
             document.getElementById(ids.logBody).classList.add('wrapText')
         else
             document.getElementById(ids.logBody).classList.remove('wrapText')
+    };
+
+    document.getElementById(ids.downloadBtn).onclick = function(e) {
+        const payload = {
+            file: currentFilePath
+        };
+
+        // Make a POST request using Fetch
+        fetch('/download', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${new Date().toISOString()}_${currentFileName}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
     };
 </script>
 </body>
