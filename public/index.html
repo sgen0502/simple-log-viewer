@@ -24,14 +24,16 @@
             </header>
         </div>
         <div class='log-entry'>
-            <pre id='log' class='log-content'>Please click a file on left menu to start.</pre>
+            <ul id="log-list" class="log-content">
+                <pre id='log' class='log-content'>Please click a file on left menu to start.</pre>
+            </ul>
         </div>
         <!-- Add more log entries here -->
     </div>
 </div>
 <script>
     const ids = {
-        logBody: 'log',
+        logBody: 'log-list',
         watchCheck: 'watch',
         wrapCheck: 'wrap',
         refreshBtn: 'refresh'
@@ -60,7 +62,7 @@
         e.target.classList.add(classes.menuActive);
 
         const logElement = document.getElementById(ids.logBody);
-        logElement.textContent = '';
+        logElement.innerHTML = "";
 
         const request = {
             type: commandTypes.fileChange,
@@ -87,7 +89,23 @@
         const response = JSON.parse(event.data);
         if(response.type === 'add'){
             const logElement = document.getElementById(ids.logBody);
-            logElement.textContent = response.data  + logElement.textContent;
+            response.data.forEach(text => {
+                if(!!text){
+                    const dirMenu = document.createElement('li');
+                    dirMenu.textContent = text;
+                    if(text.toUpperCase().includes("INFO")){
+                        dirMenu.classList.add("item-info")
+                    }
+                    else if(text.toUpperCase().includes("WARNING")){
+                        dirMenu.classList.add("item-warning")
+                    }
+                    else if(text.toUpperCase().includes("ERROR") || text.toUpperCase().includes("EXCEPTION")){
+                        dirMenu.classList.add("item-error")
+                    }
+
+                    logElement.prepend(dirMenu)
+                }
+            })
         }
         else if(response.type === commandTypes.getFiles){
             const logElement = document.getElementById('file-menu');
@@ -116,9 +134,9 @@
 
     document.getElementById(ids.wrapCheck).onclick = function(e) {
         if(e.target.checked)
-            document.getElementById(ids.logBody).classList.add('pre-wrap')
+            document.getElementById(ids.logBody).classList.add('wrapText')
         else
-            document.getElementById(ids.logBody).classList.remove('pre-wrap')
+            document.getElementById(ids.logBody).classList.remove('wrapText')
     };
 </script>
 </body>

@@ -46,17 +46,17 @@ function processInitChunk(ws, chunkData) {
     lines = lines.slice(1, lines.length);
     const data = {
         type: "add",
-        data:  lines.reverse().join('\n')
+        data:  lines
     }
     ws.send(JSON.stringify(data));
 }
 
 function addChunk(ws, chunkData) {
     // Split the chunk into lines and process in reverse order
-    const lines = chunkData.split('\n').reverse();
+    const lines = chunkData.split('\n');
     const data = {
         type: "add",
-        data:  lines.join('\n')
+        data:  lines
     }
     ws.send(JSON.stringify(data));
 }
