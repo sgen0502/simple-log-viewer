@@ -14,7 +14,6 @@ app.use(express.static('public'));
 
 const directoryPath = process.env.TARGET_PATH;
 const allowedExt = process.env.ALLOWED_EXT;
-let filePath = 'H:\\Project\\Javascript\\vite\\tail-viewer-server\\logfile.txt'; // Update this to your file's path
 const chunkSize = process.env.INIT_LOAD_SIZE; // Size of the chunk to read at a time
 
 function sendFiles(ws, paths){
@@ -35,18 +34,18 @@ function sendFiles(ws, paths){
     })
 
     const data = {
-        type: "files",
+        type: "getFiles",
         data: allFiles
     }
     ws.send(JSON.stringify(data));
 }
 
-function processChunk(ws, chunkData) {
+function processInitChunk(ws, chunkData) {
     // Drop first line as usually collapsed at Chunk Loading
     let lines = chunkData.split('\n');
     lines = lines.slice(1, lines.length);
     const data = {
-        type: "init",
+        type: "add",
         data:  lines.reverse().join('\n')
     }
     ws.send(JSON.stringify(data));
@@ -55,11 +54,6 @@ function processChunk(ws, chunkData) {
 function addChunk(ws, chunkData) {
     // Split the chunk into lines and process in reverse order
     const lines = chunkData.split('\n').reverse();
-    // lines.forEach(line => {
-    //     if (line) {
-    //         console.log(line);
-    //     }
-    // });
     const data = {
         type: "add",
         data:  lines.join('\n')
@@ -69,8 +63,8 @@ function addChunk(ws, chunkData) {
 
 wss.on('connection', ws => {
     console.log('Client connected');
-
-    let currentPosition = fs.statSync(filePath).size;
+    let filePath;
+    let currentPosition;
 
     function init() {
         // Adjust the start position and size for the last chunk of the file
@@ -95,7 +89,7 @@ wss.on('connection', ws => {
 
                 // Convert buffer to string and process the chunk
                 const data = buffer.toString('utf-8');
-                processChunk(ws, data);
+                processInitChunk(ws, data);
                 fs.close(fd, () => {}); // Close the file descriptor when done
             });
         });
@@ -147,7 +141,6 @@ wss.on('connection', ws => {
     }
 
     sendFiles(ws, directoryPath);
-    // init();
 
     let watcher;
 
@@ -156,7 +149,6 @@ wss.on('connection', ws => {
 
         if(request.type === 'fetch'){
             const newPos  = fs.statSync(filePath).size;
-            console.log(currentPosition, newPos);
             if(currentPosition >= newPos){
                 console.log("Not Doing anything!")
             }

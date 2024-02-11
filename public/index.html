@@ -24,7 +24,7 @@
             </header>
         </div>
         <div class='log-entry'>
-            <pre id='log' class='log-content'></pre>
+            <pre id='log' class='log-content'>Please click a file on left menu to start.</pre>
         </div>
         <!-- Add more log entries here -->
     </div>
@@ -37,17 +37,27 @@
         refreshBtn: 'refresh'
     };
 
+    const attribute = {
+        dirName: 'dir'
+    }
+
+    const classes = {
+        menuActive: 'active'
+    }
+
     const commandTypes = {
+        getFiles: 'getFiles',
         fileChange: 'file_change',
         watch: 'watch',
+        fetch: 'fetch'
     }
 
     const ws = new WebSocket('ws://' + window.location.host);
 
     function menu_onClick(e){
         const menuElements = document.querySelectorAll('#file-menu > a');
-        menuElements.forEach(e => e.classList.remove('active'))
-        e.target.classList.add('active');
+        menuElements.forEach(e => e.classList.remove(classes.menuActive))
+        e.target.classList.add(classes.menuActive);
 
         const logElement = document.getElementById(ids.logBody);
         logElement.textContent = '';
@@ -55,7 +65,7 @@
         const request = {
             type: commandTypes.fileChange,
             data: {
-                file: e.target.getAttribute('dir') + e.target.textContent,
+                file: e.target.getAttribute(attribute.dirName) + e.target.textContent,
                 watch: document.getElementById('watch').checked
             }
         }
@@ -75,11 +85,11 @@
 
     ws.onmessage = function(event) {
         const response = JSON.parse(event.data);
-        if(response.type === 'init'){
+        if(response.type === 'add'){
             const logElement = document.getElementById(ids.logBody);
-            logElement.textContent = logElement.textContent + '\n' + response.data;
+            logElement.textContent = response.data  + logElement.textContent;
         }
-        else if(response.type === 'files'){
+        else if(response.type === commandTypes.getFiles){
             const logElement = document.getElementById('file-menu');
             response.data.forEach(dirAndFiles => {
                 const dirMenu = document.createElement('div');
@@ -89,21 +99,17 @@
                 dirAndFiles.files.forEach(file => {
                     const newA = document.createElement('a');
                     newA.textContent = file.toString();
-                    newA.setAttribute('dir', dirAndFiles.dir.toString());
+                    newA.setAttribute(attribute.dirName, dirAndFiles.dir.toString());
                     newA.onclick = menu_onClick;
                     logElement.append(newA);
                 })
             })
         }
-        else{
-            const logElement = document.getElementById(ids.logBody);
-            logElement.textContent = response.data  + logElement.textContent;
-        }
     };
 
     // Event Registering
     document.getElementById(ids.refreshBtn).onclick = function() {
-        ws.send(JSON.stringify({type: 'fetch'}));
+        ws.send(JSON.stringify({type: commandTypes.fetch}));
     };
 
     document.getElementById(ids.watchCheck).onclick = watchFileOnChange
