@@ -25,5 +25,7 @@ DEBUG_LOGGING=false
 ```bash
 // clone this repo
 npm install
-npm
+node server.js
+or if you wanna ran background
+nohup node server.js & 
 ```
