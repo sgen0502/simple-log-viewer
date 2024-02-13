@@ -13,9 +13,15 @@ gracefulFs.gracefulify(fs);
 app.use(express.json());
 app.use(express.static('public'));
 
+const port = process.env.PORT ?? 29999;
+const debugLogging = process.env.DEBUG_LOGGING ?? false;
 const directoryPath = process.env.TARGET_PATH;
 const allowedExt = process.env.ALLOWED_EXT;
 const chunkSize = process.env.INIT_LOAD_SIZE; // Size of the chunk to read at a time
+
+function debugLogger(...param){
+    debugLogging && console.log(...param);
+}
 
 function sendFiles(ws, paths){
     const allFiles = [];
@@ -117,9 +123,6 @@ wss.on('connection', ws => {
                 // Convert buffer to string and process the chunk
                 const data = buffer.toString('utf-8');
                 addChunk(ws, data);
-                fs.watch(filePath, event => {
-
-                })
                 fs.close(fd, () => {}); // Close the file descriptor when done
             });
         });
@@ -129,9 +132,9 @@ wss.on('connection', ws => {
         return fs.watch(filePath, (e, f) => {
             if(e === 'change'){
                 const newPos  = fs.statSync(filePath).size;
-                console.log(currentPosition, newPos);
+
                 if(currentPosition >= newPos){
-                    console.log("Not Doing anything!")
+                    debugLogger("Same file. Not Doing anything!")
                 }
                 else{
                     read(currentPosition, newPos);
@@ -148,18 +151,9 @@ wss.on('connection', ws => {
     ws.on('message', message => {
         const request = JSON.parse(message);
 
-        if(request.type === 'fetch'){
-            const newPos  = fs.statSync(filePath).size;
-            if(currentPosition >= newPos){
-                console.log("Not Doing anything!")
-            }
-            else{
-                read(currentPosition, newPos);
-                currentPosition = newPos;
-            }
-        }
-        else if(request.type === 'file_change'){
-            console.log(request);
+        if(request.type === 'file_change'){
+            debugLogger(request);
+
             filePath = request.data.file;
             currentPosition = fs.statSync(filePath).size;
             init();
@@ -171,13 +165,26 @@ wss.on('connection', ws => {
                 watcher = startWatch();
             }
         }
-        else if(request.type === 'watch'){
-            if(request.data.watch){
-                watcher = startWatch();
+
+        if(filePath){
+            if(request.type === 'fetch'){
+                const newPos  = fs.statSync(filePath).size;
+                if(currentPosition >= newPos){
+                    debugLogger("Not Doing anything!")
+                }
+                else{
+                    read(currentPosition, newPos);
+                    currentPosition = newPos;
+                }
             }
-            else{
-                if(watcher){
-                    watcher.close();
+            else if(request.type === 'watch'){
+                if(request.data.watch){
+                    watcher = startWatch();
+                }
+                else{
+                    if(watcher){
+                        watcher.close();
+                    }
                 }
             }
         }
@@ -197,7 +204,7 @@ app.post('/download', function(req, res){
         res.download(file); // Set disposition and send it.
     }
 
-    console.log("No File Given!")
+    console.error("No File Given!")
 });
 
-server.listen(12345, () => console.log('Server started on http://localhost:12345'));
+server.listen(port, () => console.log(`Server started on http://localhost:${port}`));
